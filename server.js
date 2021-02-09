@@ -7,6 +7,7 @@ const cors        = require('cors');
 const apiRoutes         = require('./routes/api.js');
 const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
+const mongoose          = require("mongoose");
 
 const app = express();
 
@@ -45,6 +46,16 @@ app.use(function(req, res, next) {
     .type('text')
     .send('Not Found');
 });
+
+//Configure connection to database
+mongoose.connect(process.env.DB, {
+  useUnifiedTopology: true, useNewUrlParser: true, useFindAndModify: false});
+
+  const db = mongoose.connection;
+  db.on("error", console.error.bind(console, "connection errror:"));
+  db.once("open", function() {
+    console.log("DB Connection Successful!")
+  });
 
 //Start our server and tests!
 app.listen(process.env.PORT || 3000, function () {
