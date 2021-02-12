@@ -2,18 +2,17 @@ const mongoose = require('mongoose')
 const ReplySchema = require('./reply').ReplySchema
 
 var ThreadSchema = new mongoose.Schema({
-    thread: String,
-    text: String,
-    created_on: Date,
-    bumped_on: Date,
-    reported: Boolean,
-    delete_password: String,
-    replies: [ReplySchema]
+    board: {type: String, required: true},
+    text: {type: String, required: true},
+    created_on: {type: Date, required: true},
+    bumped_on: {type: Date, required: true},
+    reported: {type: Boolean, required: true},
+    delete_password: {type: String, required: true},
+    replies: {type: [ReplySchema], required: true}
   });
   
-  var Thread = mongoose.model('Thread', ThreadSchema);
+  var Thread = mongoose.model('Thread', ThreadSchema, "MessageBoard");
   
   module.exports = {
-    ThreadSchema: ThreadSchema,
     Thread: Thread
   }

@@ -1,70 +1,79 @@
 'use strict';
-const BoardController = require('../controllers/board.js')
+const ThreadController = require('../controllers/thread.js')
 const ReplyController = require('../controllers/reply.js')
+const Thread = require('../models/thread.js')
 
 module.exports = function (app) {
 
-  const board = new BoardController()  
-  const reply = new ReplyController()
+  const threadController = new ThreadController()
+  const replyController = new ReplyController()
   
   app.route('/api/threads/:board')
     .post(function (req, res){//Creating a new thread: POST request to /api/threads/{board}
     console.log(req.body) //format: { board: 'asdf', text: 'sdfdfs', delete_password: 'bob' }
     console.log(req.params)
-    //Create Board and re-route to : /b/TestingBoardCreation/.  Also creates a thread
 
-    console.log("Board : " + req.params.board)
-    if(req.body.board){
-      console.log("Call 1")
-      // board.createBoard(req.body).then(board.getBoard(req.body.board).then(res.redirect(302, '/b/' + req.body.board + '/')))
-      board.createBoard(req.body).then(res.redirect(302, '/b/' + req.body.board + '/'))
-      
-    }
-    else{
-      console.log("Call 2")
-      reply.createReply(req.params.board,req.body).then(res.redirect(304, '/b/' + req.params.board + '/'))
+      if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
+        req.body.board = req.params.board
 
-    }
+      var thread = threadController.createThread(req.body)
+      res.redirect('/b/' + thread.board + '/')
     })
     
     .get(function (req, res){//Viewing the 10 most recent threads with 3 replies each: GET request to /api/threads/{board}
-    //get request to https://anonymous-message-board.freecodecamp.rocks/api/threads/sdfgsdfgsdfg returns :
-//     returns : [
-//     {
-//       "_id": "6022d6675d9f5005e2c1ac0c",
-//       "text": "asdf",
-//       "created_on": "2021-02-09T18:37:26.991Z",
-//       "bumped_on": "2021-02-09T18:37:26.991Z",
-//       "reported": false,
-//       "delete_password": "asdf",
-//       "replies": [],
-//       "replycount": 0
-//   }
 
-// ]
-console.log(req.params)
-      board.getBoard(req.params.board).then(result => res.json({info:result}))
+      if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
+        req.body.board = req.params.board
+
+      threadController.getThreads(req.body.board, (threads) => {
+        res.json(threads)
+      })
     })
     
     .delete(function (req, res){//Deleting a thread
-      board.deleteThread().then(result => res.json({info:result}))
+      //if password is incorrect: return "incorrect password".  Otherwise return "Success".
+      threadController.deleteThread(req.body, (response) => {
+        res.send(response)
+      })
     })
 
-    .put(function (req, res){//Deleting a thread 
-      board.reportThread().then(result => res.json({info:result}))
+    .put(function (req, res){//Reporting a thread 
+      threadController.reportThread(req.body, (response) => {
+        res.send(response)
+      })
     })
 
   app.route('/api/replies/:board')
     .post(function (req, res){//Creating a new reply
-      reply.createReply().then(result => res.json({info:result}))
+    
+      if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
+        req.body.board = req.params.board
+    
+      replyController.createReply(req.body)
+      res.redirect('/b/' + req.body.board + '/' + req.body.thread_id) // + '?new_reply_id=' + newThread.replies[newThread.replies-1]._id)
     })
 
     .get(function (req, res){ // Viewing a single thread with all replies
-      reply.viewReplies().then(result => res.json({info:result}))
+
+      if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
+      req.body.board = req.params.board
+
+      console.log(req.query.thread_id)
+
+      replyController.viewReplies(req.query, (response) => {
+        console.log(response)
+        res.json(response)
+      })
     })
 
     .delete(function(req, res){
-      reply.deleteReply().then(result => res.json({info:result}))
+      // console.log("Body")
+      // console.log(req.body)
+      // console.log("Params")
+      // console.log(req.params)
+      // console.log("Query")
+      // console.log(req.query)
+      replyController.deleteReply(req.body, (data)=> res.json(data))//.then(result => res.json({info:result}))
     })
 
     .put(function(req, res){

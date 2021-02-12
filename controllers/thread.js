@@ -2,86 +2,103 @@ const Thread = require("../models/thread").Thread
 
 class ThreadController{
 
-    async createThread(threadReq){
-        var newThread = new Thread({
-            text: threadReq.text,
-            created_on: new Date(),
-            bumped_on: new Date(),
-            reported: false,
-            delete_password: threadReq.delete_password,
-            replies: []
+    createThread(threadReq){
+        console.log("Thread Req: ")
+        console.log(threadReq)
+
+        var newthread = new Thread(threadReq)
+        newthread.created_on = new Date().toUTCString()
+        newthread.bumped_on = new Date().toUTCString()
+        newthread.reported = false
+        newthread.replies = []
+
+        console.log(newthread)
+
+        newthread.save((err, doc) => {
+            if(err) console.error(err)
         })
-        var boardExists = await Board.findOne({board: newBoard.board}, (err, doc) => {
-            if(err) console.error(err)
-          })
-        if(!boardExists)
-            newBoard.save((err, doc) => {
-            if(err) console.error(err)
+
+        return newthread
+    }
+
+
+    //https://stackoverflow.com/questions/23642510/send-mongodb-query-result-as-json-using-express
+    getThreads(board, cb){
+
+        var threads = Thread.find({board:board})
+        .sort({bumped_on: 'desc'})
+        .limit(10)
+        .select('-delete_password -reported')
+        .lean()
+        .exec((err, data) => {
+        if(err) console.error(err)
+        if(!data) return
+        
+        console.log("Passed!")
+        data.forEach((thread) =>{
+            //Sort by date
+            thread.replies.sort((thread1, thread2) => {
+                return thread2.created_on - thread1.created_on
+            })
+
+            thread.replycount = thread.replies.length
+
+            //Slice replies off
+            thread.replies = thread.replies.slice(0, 3)
+
+            thread.replies.forEach((reply) => {
+                reply.delete_password = undefined
+                reply.reported = undefined
+            })
         })
+        cb(data)
+        }) 
     }
 
-    async getThread(boardId){
-        console.log("Get board" + boardId)
-        return await Board.findOne({board: boardId}, (err, doc) => {
+    deleteThread(req, cb){
+ 
+        if(!req)
+            return
+
+        var checkForHexRegExp = new RegExp("^[0-9a-fA-F]{24}$")
+
+        if(!checkForHexRegExp.test(req.thread_id))
+            return cb("Invalid ID")
+
+        Thread.findById(req.thread_id, ((err, data) => {
             if(err) console.error(err)
-          })
+
+            if(data.delete_password == req.delete_password)
+                Thread.deleteOne({_id:req._id}, ((err, data) => {
+                    if(err) console.error(err)
+                    return cb("Success")
+                }))
+            else
+                return cb("Invalid password")
+        }))
+        return
     }
 
-    async deleteThread(){
-        return "Deleting a thread with the incorrect password"
-    }
+    reportThread(req, cb){
+        
+        if(!req)
+            return
 
-    async reportThread(){
-        return "Reporting a thread"
+        var checkForHexRegExp = new RegExp("^[0-9a-fA-F]{24}$")
+
+        if(!checkForHexRegExp.test(req.thread_id))
+            return cb("Invalid ID")
+
+        var updatedThread = Thread.findByIdAndUpdate( //Await here causes the entry to be added twice to the DB.  No clue why.
+            req.thread_id,
+            {reported: true},
+            {new: true},
+            (err, doc) => {
+                if(err) return console.error(err)
+            return cb("Reported")
+        })
+        return
     }
 }
 
 module.exports = ThreadController
-
-
-//Get Board result:
-// {
-//     "_id": "601c4a3f49e5dd1fb546c90f",
-//     "text": "nah",
-//     "created_on": "2021-02-04T19:25:51.532Z",
-//     "bumped_on": "2021-02-04T21:07:39.193Z",
-//     "reported": true,
-//     "delete_password": "ye",
-//     "replies": [
-//       {
-//         "_id": "601c61e449e5dd1fb546c910",
-//         "text": "\r\nJjjj\r\n",
-//         "created_on": "2021-02-04T21:06:44.141Z",
-//         "reported": false,
-//         "delete_password": "auth.usenet.nl"
-//       },
-//       {
-//         "_id": "601c61f849e5dd1fb546c911",
-//         "text": "(2021-02-04T21:06:44.141Z)",
-//         "created_on": "2021-02-04T21:07:04.171Z",
-//         "reported": false,
-//         "delete_password": "auth.usenet.nl"
-//       },
-//       {
-//         "_id": "601c621849e5dd1fb546c912",
-//         "text": "(2021-02-04T21:06:44.141Z)",
-//         "created_on": "2021-02-04T21:07:36.826Z",
-//         "reported": false,
-//         "delete_password": "(2021-02-04T21:06:44.141Z)"
-//       },
-//       {
-//         "_id": "601c621a49e5dd1fb546c913",
-//         "text": "(2021-02-04T21:06:44.141Z)",
-//         "created_on": "2021-02-04T21:07:38.126Z",
-//         "reported": false,
-//         "delete_password": "(2021-02-04T21:06:44.141Z)"
-//       },
-//       {
-//         "_id": "601c621b49e5dd1fb546c914",
-//         "text": "(2021-02-04T21:06:44.141Z)",
-//         "created_on": "2021-02-04T21:07:39.046Z",
-//         "reported": false,
-//         "delete_password": "(2021-02-04T21:06:44.141Z)"
-//       }
-//     ]
-//   }

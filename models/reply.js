@@ -10,5 +10,6 @@ const ReplySchema = new mongoose.Schema({
 const Reply = mongoose.model('Reply', ReplySchema);
 
 module.exports = {
-  ReplySchema: ReplySchema
+  ReplySchema: ReplySchema,
+  Reply: Reply
 }
