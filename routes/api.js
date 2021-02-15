@@ -58,8 +58,6 @@ module.exports = function (app) {
       if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
       req.body.board = req.params.board
 
-      console.log(req.query.thread_id)
-
       replyController.viewReplies(req.query, (response) => {
         console.log(response)
         res.json(response)
@@ -67,16 +65,16 @@ module.exports = function (app) {
     })
 
     .delete(function(req, res){
-      // console.log("Body")
-      // console.log(req.body)
-      // console.log("Params")
-      // console.log(req.params)
-      // console.log("Query")
-      // console.log(req.query)
+
+      if(!req.body.board || req.body.board === '')//If board isn't passed in the arguments, we add it
+      req.body.board = req.params.board
+
       replyController.deleteReply(req.body, (data)=> res.json(data))//.then(result => res.json({info:result}))
     })
 
     .put(function(req, res){
-      reply.reportReply().then(result => res.json({info:result}))
+      replyController.reportReply(req.body,(response) => {
+        res.json(response)
+      })    
     })
 };

@@ -24,8 +24,8 @@ class ReplyController{
 
     viewReplies(req, cb){
 
-        console.log("here")
-        console.log(req.thread_id)
+        // console.log("here")
+        // console.log(req.thread_id)
 
         Thread.findById((req.thread_id),(err, doc) => {
             if(err) console.error(err)
@@ -47,8 +47,6 @@ class ReplyController{
     }
 
     async deleteReply(req, cb){
-
-        console.log(req.thread_id)
         
         if(!req)
             return
@@ -71,7 +69,7 @@ class ReplyController{
                     break
                 }
                 else
-                    return "Incorrect Password"
+                    return "Incorrect ID"
             }
 
             updThread.save((err, doc) => {
@@ -85,22 +83,29 @@ class ReplyController{
     reportReply(req, cb){
         
         if(!req)
-            return
+        return
 
-        var checkForHexRegExp = new RegExp("^[0-9a-fA-F]{24}$")
+    var checkForHexRegExp = new RegExp("^[0-9a-fA-F]{24}$")
 
-        if(!checkForHexRegExp.test(req.thread_id))
-            return cb("Invalid ID")
+    if(!checkForHexRegExp.test(req.thread_id))
+        return cb("Invalid ID")
 
-        var updatedThread = Thread.findByIdAndUpdate( //Await here causes the entry to be added twice to the DB.  No clue why.
-            req.thread_id,
-            {reported: true},
-            {new: true},
-            (err, doc) => {
-                if(err) return console.error(err)
+    Thread.findOne(({"replies._id": req.reply_id}), (err, repThread) =>{
+        if(err) console.error(err)
+        
+        for(var i = 0; i< repThread.replies.length; i++){
+            if(repThread.replies[i]._id == req.reply_id){
+                repThread.replies[i].reported=true
+                break
+            }
+        }
+
+        repThread.save((err, doc) => {
+            if(err) return console.error(err)
             return cb("Reported")
         })
         return
+    })
     }
 }
 
