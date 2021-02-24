@@ -2,9 +2,7 @@ const Thread = require("../models/thread").Thread
 
 class ThreadController{
 
-    createThread(threadReq){
-        console.log("Thread Req: ")
-        console.log(threadReq)
+    createThread(threadReq, cb){
 
         var newthread = new Thread(threadReq)
         newthread.created_on = new Date().toUTCString()
@@ -12,13 +10,11 @@ class ThreadController{
         newthread.reported = false
         newthread.replies = []
 
-        console.log(newthread)
-
         newthread.save((err, doc) => {
             if(err) console.error(err)
         })
 
-        return newthread
+        cb(newthread)
     }
 
 
@@ -34,7 +30,6 @@ class ThreadController{
         if(err) console.error(err)
         if(!data) return
         
-        console.log("Passed!")
         data.forEach((thread) =>{
             //Sort by date
             thread.replies.sort((thread1, thread2) => {

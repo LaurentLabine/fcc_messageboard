@@ -9,244 +9,164 @@ chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
 
+    var testThreadId 
+    var testReplyId
+    var testThreadPw = "test"
+    var testReplyPw = "something"
 
-    
-    suite('POST /api/issues/{project} => Issue Creation', function() {
+      test('Creating a new thread.', (done) => {
+        chai.request(server)
+            .post('/api/threads/testBoard')
+            .send({
+                board: "testBoard",
+                text: "this is a test",
+                delete_password: testThreadPw
+            })
+            .end((err, res) => {
+            if (err) done(err);
+            assert.equal(res.status, 200)
+            testThreadId = res.redirects[0].split('/')[res.redirects[0].split('/').length - 1]
+            done();
+            });
+        });
 
-    //     var issue = {
-    //     issue_title: "Chai Issue Creation Test 1",
-    //     issue_text: "This is a test issue.",
-    //     created_by: "bob",
-    //     assigned_to: "Chai",
-    //     open: true,
-    //     status_text: "In QA"
-    //     }
+    test('Viewing the 10 most recent threads with 3 replies each.', (done) => {
+        chai.request(server)
+            .get('/api/threads/testBoard')
+            .end((err, res) => {
+            assert.equal(res.status, 200);
+            assert.isArray(res.body)
+            assert.isAtMost(res.body.length,10)
+            res.body.forEach(thread => {
+                assert.isAtMost(thread.replies.length,3)
+                assert.isUndefined(thread.delete_password)
+            });
+        done();
+        });
+    });
 
-    //     var partialIssue = {
-    //         issue_title: "Chai Issue Creation Test 2",
-    //         issue_text: "Required Fields.",
-    //         created_by: "Chai",
-    //     }
-    //     // More data here : https://stackoverflow.com/questions/31594844/chai-should-have-property-supertest
-    //   test('Create an issue with every field', function(done) {
-    //     chai.request(server)
-    //         .post('/api/issues/fcc-project')
-    //         .send(issue)
-    //         .end((err, res) => {
-    //         if (err) done(err);
-    //         assert.equal(res.status, 200);
-    //         assert.equal(typeof res.body._id, "string")//ID
-    //         issue_id = res.body._id
-    //         assert.equal(res.body.issue_title, issue.issue_title)//Issue_title
-    //         assert.equal(res.body.issue_text, issue.issue_text)//Issue_text
-    //         assert.equal(res.body.created_by, issue.created_by)//Created_by
-    //         assert.equal(res.body.assigned_to, issue.assigned_to)//Assigned_to
-    //         assert.equal(res.body.open, issue.open)//Issue_Open
-    //         assert.equal(res.body.status_text, issue.status_text)//Status_text
-    //         assert.closeTo(new Date().valueOf(),new Date(res.body.created_on).valueOf(),1000);//Created_On
-    //         assert.equal(new Date(res.body.created_on).valueOf(),new Date(res.body.updated_on).valueOf());//Updated_On
-    //         done();
-    //         });
-    //     });
+// Deleting a thread with the incorrect password: DELETE request to /api/threads/{board} with an invalid delete_password
 
-    //   test('Create an issue with only required fields', function(done) {
-    //     chai.request(server)
-    //     .post('/api/issues/fcc-project')
-    //     .send({issue_title: issue.issue_title, issue_text: issue.issue_text, created_by: issue.created_by })
-    //     .end((err, res) => {
-    //     if (err) done(err);
-    //     assert.equal(res.status, 200);
-    //     assert.equal(typeof res.body._id, "string")
-    //     assert.equal(res.body.issue_title, issue.issue_title)
-    //     assert.equal(res.body.issue_text, issue.issue_text)
-    //     assert.equal(res.body.created_by, issue.created_by)
-    //     assert.equal(res.body.assigned_to, "")
-    //     assert.equal(res.body.open, true)
-    //     assert.equal(res.body.status_text, "")
-    //     assert.closeTo(new Date().valueOf(),new Date(res.body.created_on).valueOf(),2000);
-    //     assert.equal(new Date(res.body.created_on).valueOf(),new Date(res.body.updated_on).valueOf());
-    //     done();
-    //         });
-    //     });
+    test('Deleting a thread with the incorrect password', (done) => {
+        chai.request(server)
+            .del('/api/threads/testBoard')
+            .send({board:"testBoard",
+                thread_id:testThreadId,
+                delete_password:"saded"})
+            .end((err, res) => {
+                assert.equal(res.status, 200);
+                assert.equal(res.body,"Invalid password")
+            done();
+        });
+    });
 
-    //   test('Create an issue with missing required fields', function(done) {
-    //     chai.request(server)
-    //         .post('/api/issues/fcc-project')
-    //         .send({issue_title: issue.issue_title})
-    //         .end((err, res) => {
-    //         if (err) done(err);
-    //             assert.equal(res.status, 200);
-    //             assert.equal(res.body.error,"required field(s) missing")
-    //             done();
-    //         });
-    //     });
+// Reporting a thread: PUT request to /api/threads/{board}
+
+    test('Reporting a thread', (done) => {
+        chai.request(server)
+            .put('/api/threads/testBoard')
+            .send({board:"testBoard",
+                    thread_id:testThreadId})
+            .end((err, res) => {
+                assert.equal(res.status, 200);
+                assert.equal(res.body, "Reported")
+            done();
+        });
+    });
+
+// Creating a new reply: POST request to /api/replies/{board}
+
+    test('Creating a new reply', (done) => {
+        chai.request(server)
+            .post('/api/replies/testBoard')
+            .send({board:"testBoard",
+                    thread_id:testThreadId,
+                    text:"This is a test",
+                    delete_password:testReplyPw})
+            .end((err, res) => {
+            if (err) done(err);
+            assert.equal(res.status, 200);
+            done();
+        });
+    });
+
+// Viewing a single thread with all replies: GET request to /api/replies/{board}
+
+    test('Viewing a single thread with all replies', (done) => {
+        chai.request(server)
+            .get('/api/replies/testBoard') //?thread_id=603628a48666c81808040649')
+            .query({thread_id:testThreadId})
+            .end((err, res) => {
+                assert.equal(res.status, 200);
+                assert.isObject(res.body)
+                assert.isArray(res.body.replies)       
+                testReplyId = res.body.replies[0]._id
+                done();
+        });
+    });
+
+// Deleting a reply with the incorrect password: DELETE request to /api/threads/{board} with an invalid delete_password
+
+    test('Deleting a reply with the incorrect password', (done) => {
+        chai.request(server)
+        .del('/api/threads/testBoard')
+        .send({board:"testBoard",
+        thread_id:testThreadId,
+        reply_id:testReplyId,
+        delete_password:""
     })
+        .end((err, res) => {
 
-    suite('GET /api/issues/{project} => View Issues', function() {
+            assert.equal(res.status, 200);
+            assert.equal(res.body, "Invalid password")
+            done();
+        });
+    });
 
-    //   test('View issues on a project', function(done) {
-    //     chai.request(server)
-    //         .get('/api/issues/fcc-project')
-    //         .query({})
-    //         .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         resArray = res.body
-    //         resArray.forEach(element => {
-    //             expect(element).to.have.property("updated_on");
-    //             expect(element).to.have.property("assigned_to");
-    //             expect(element).to.have.property("open");
-    //             expect(element).to.have.property("status_text");
-    //             expect(element).to.have.property("_id");
-    //             expect(element).to.have.property("issue_title");
-    //             expect(element).to.have.property("issue_text");
-    //             expect(element).to.have.property("created_by");
-    //             expect(element).to.have.property("created_on");
-    //         });
-    //         done();
-    //       });
-    //   });
+// Reporting a reply: PUT request to /api/replies/{board}
 
-    //   test('View issues on a project with one filter', function(done) {
-    //     chai.request(server)
-    //         .get('/api/issues/fcc-project?open=false')
-    //         .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         resArray = res.body
-    //         resArray.forEach(element => {
-    //             expect(element).to.have.property("updated_on");
-    //             expect(element).to.have.property("assigned_to");
-    //             expect(element).to.have.property("open");
-    //             expect(element).to.have.property("status_text");
-    //             expect(element).to.have.property("_id");
-    //             expect(element).to.have.property("issue_title");
-    //             expect(element).to.have.property("issue_text");
-    //             expect(element).to.have.property("created_by");
-    //             expect(element).to.have.property("created_on");
-    //             assert.equal(element.open,false)
-    //         });
-    //         done();
-    //         });
-    //     });
+    test('Reporting a reply: PUT request to /api/replies/{board}', (done) => {
+        chai.request(server)
+            .put('/api/replies/testBoard')
+            .send({thread_id:testThreadId,
+            reply_id:testReplyId})
+            .end(function(err, res) {
+                assert.equal(res.status, 200);
+                assert.equal(res.body, "Reported");
+                done();
+            });
+        });
 
-    //   test('View issues on a project with multiple filters', function(done) {
-    //     chai.request(server)
-    //         .get('/api/issues/fcc-project?open=true?created_by="bob"')
-    //         .end(function(err, res) {
-    //             assert.equal(res.status, 200);
-    //             resArray = res.body
-    //             resArray.forEach(element => {
-    //                 expect(element).to.have.property("updated_on");
-    //                 expect(element).to.have.property("assigned_to");
-    //                 expect(element).to.have.property("open");
-    //                 expect(element).to.have.property("status_text");
-    //                 expect(element).to.have.property("_id");
-    //                 expect(element).to.have.property("issue_title");
-    //                 expect(element).to.have.property("issue_text");
-    //                 expect(element).to.have.property("created_by");
-    //                 expect(element).to.have.property("created_on");
-    //                 assert.equal(element.open,false)
-    //                 assert.equal(element.created_by,"bob")
-    //             });
-    //             done();
-    //         });
-    //     });
-    })
+    // Deleting a reply with the correct password: DELETE request to /api/threads/{board} with a valid delete_password
 
-    suite('PUT /api/issues/{project} => Update an issue', function() {
+    test('Deleting a reply with the correct password', (done) => {
+        chai.request(server)
+        .del('/api/replies/testboard')
+        .send({board:"testboard",
+            thread_id:testThreadId,
+            reply_id:testReplyId,
+            delete_password:testReplyPw
+        })
+        .end((err, res) => {
 
-    //   test('Update one field on an issue', function(done) {
-    //     chai.request(server)
-    //         .put('/api/issues/fcc-project')
-    //         .send({_id: issue_id, issue_title:"chai put test issue"})
-    //         .end(function(err, res) {
-    //             assert.equal(res.status, 200);
-    //             assert.equal(res.body.result, "successfully updated");
-    //             assert.equal(res.body._id, issue_id);
-    //             done();
-    //         });
-    //     });
+            assert.equal(res.status, 200);
+            assert.equal(res.body, "Success")
+            done();
+        });
+    });
 
-    //   test('Update multiple fields on an issue', function(done) {
-    //     chai.request(server)
-    //     .put('/api/issues/fcc-project')
-    //     .send({_id: issue_id, issue_title:"chai put test issue", issue_text:"Modified by Chai Testing", created_by: "Chai Testing"})
-    //     .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         assert.equal(res.body.result, "successfully updated");
-    //         assert.equal(res.body._id, issue_id);
-    //         done();
-    //         });
-    //     });
+    // Deleting a thread with the correct password: DELETE request to /api/threads/{board} with a valid delete_password
 
-    //   test('Update an issue with missing _id', function(done) {
-    //     chai.request(server)
-    //     .put('/api/issues/fcc-project')
-    //     .send({issue_title:"chai put test issue"})
-    //     .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         assert.equal(res.body.error,"missing _id");
-    //         done();
-    //         });
-    //     });
-
-    //   test('Update an issue with no fields to update', function(done) {
-    //     chai.request(server)
-    //     .put('/api/issues/fcc-project')
-    //     .send({_id: issue_id})
-    //     .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         assert.equal(res.body.error, "no update field(s) sent");
-    //         assert.equal(res.body._id, issue_id);
-    //         done();
-    //         });
-    //     });
-
-    //   test('Update an issue with an invalid _id', function(done) {
-    //     chai.request(server)
-    //     .put('/api/issues/fcc-project')
-    //     .send({_id: invalid_id, issue_title:"chai put test issue"})
-    //     .end(function(err, res) {
-    //         assert.equal(res.body.error, "could not update");
-    //         assert.equal(res.body._id, invalid_id);
-    //         done();
-    //         });
-    //     });
-    })
-
-    suite('DELETE /api/issues/{project} => Delete an Issue', function() {
-
-    //   test('Delete an issue', function(done) {
-    //     chai.request(server)
-    //         .del('/api/issues/fcc-project')
-    //         .send({_id:issue_id})
-    //         .end(function(err, res) {
-    //            assert.equal(res.status, 200);
-    //            assert.equal(res.body.result, "successfully deleted")
-    //            assert.equal(res.body._id, issue_id)
-    //         done();
-    //         });
-    //     });
-
-    //   test('Delete an issue with an invalid _id', function(done) {
-    //     chai.request(server)
-    //     .del('/api/issues/fcc-project')
-    //     .send({_id:"5f133661ef664d011fd5b9ed"})
-    //     .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         assert.equal(res.body.error, "could not delete")
-    //         done();
-    //         });
-    //     });
-
-    //   test('Delete an issue with missing _id', function(done) {
-    //     chai.request(server)
-    //         .del('/api/issues/fcc-project')
-    //         .send({})
-    //         .end(function(err, res) {
-    //         assert.equal(res.status, 200);
-    //         assert.equal(res.body.error, "missing _id")
-    //         done();
-    //         });
-    //     });
-    })
-});
+    test('Deleting a thread with the correct password', (done) => {
+        chai.request(server)
+            .del('/api/threads/testBoard')
+            .send({board:"testboard",
+            thread_id: testThreadId,
+        delete_password:testThreadPw})
+            .end((err, res) => {
+                assert.equal(res.status, 200);
+                assert.equal(res.body, "Success")
+            done();
+        });
+    });
+})

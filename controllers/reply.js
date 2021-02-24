@@ -4,14 +4,12 @@ var ObjectId = require('mongodb').ObjectID;
 
 class ReplyController{
     createReply(replyReq){
-        console.log("create Reply")
 
         var newReply = new Reply(replyReq)
 
         newReply.created_on = new Date().toUTCString()
         newReply.reported = false
 
-        // console.log(replyReq.thread_id)
          var updatedThread = Thread.findByIdAndUpdate( //Await here causes the entry to be added twice to the DB.  No clue why.
             replyReq.thread_id,
             {$push: {replies: newReply}, bumped_on:new Date().toUTCString()},
@@ -23,9 +21,6 @@ class ReplyController{
     }
 
     viewReplies(req, cb){
-
-        // console.log("here")
-        // console.log(req.thread_id)
 
         Thread.findById((req.thread_id),(err, doc) => {
             if(err) console.error(err)
@@ -58,9 +53,6 @@ class ReplyController{
 
         Thread.findOne(({"replies._id": req.reply_id}), (err, updThread) =>{
             if(err) console.error(err)
-
-            console.log(updThread)
-            console.log(updThread.replies)
             
             for(var i = 0; i< updThread.replies.length; i++){
                 if(updThread.replies[i]._id == req.reply_id){
@@ -76,6 +68,7 @@ class ReplyController{
                 if(err) return console.error(err)
                 return cb("Success")
             })
+            
             return
         })
     }
@@ -93,6 +86,9 @@ class ReplyController{
     Thread.findOne(({"replies._id": req.reply_id}), (err, repThread) =>{
         if(err) console.error(err)
         
+        if(!repThread)
+        return
+
         for(var i = 0; i< repThread.replies.length; i++){
             if(repThread.replies[i]._id == req.reply_id){
                 repThread.replies[i].reported=true
