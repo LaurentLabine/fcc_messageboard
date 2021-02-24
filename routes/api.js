@@ -15,7 +15,6 @@ module.exports = function (app) {
         req.body.board = req.params.board
 
       threadController.createThread(req.body, (response) =>{
-        console.log('/b/' + response.board + '/'+ response._id)
         return res.redirect('/b/' + response.board + '/'+ response._id)
       })
       
